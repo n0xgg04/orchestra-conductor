@@ -1,0 +1,5 @@
+.omc
+.env
+server/.env
+node_modules/
+.claude
