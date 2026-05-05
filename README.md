@@ -1,6 +1,6 @@
 # Orchestra Conductor - Hệ thống Điều khiển Nhạc cụ Phân tán
 
-> Đồ án môn **Hệ thống Phân tán** — Server điều phối nhiều thiết bị ESP32 phát nhạc đồng bộ qua giao thức MQTT.
+> Đồ án môn **Hệ thống Phân tán** — Server điều phối thiết bị ESP32 phát nhạc đồng bộ qua giao thức MQTT. Mỗi buzzer đóng vai trò một nhạc cụ độc lập qua MQTT topic riêng.
 
 ---
 
@@ -8,10 +8,10 @@
 
 Hệ thống mô phỏng một **dàn nhạc giao hưởng phân tán**:
 - **Nhạc trưởng (Server)**: Điều phối bài nhạc, phát/lùi/tua, đảm bảo đồng bộ.
-- **Nhạc công (ESP32)**: Mỗi buzzer kết nối với ESP32 đóng vai trò một nhạc cụ (guitar, bass, oboe, drums).
+- **Nhạc công (ESP32)**: Một board ESP32 vật lý kết nối 4 buzzer. Mỗi buzzer đóng vai trò một nhạc cụ độc lập (guitar, bass, oboe, drums) thông qua **MQTT topic riêng**.
 - **Nhịp điệu (Timeline)**: Server lưu file cấu hình bài nhạc, xác định từng nhạc cụ phát gì tại thởi điểm nào.
 
-Các nhạc cụ hoạt động độc lập qua **MQTT topics**, đảm bảo nếu một nhạc cụ bị tắt/mất kết nối, các nhạc cụ khác vẫn tiếp tục phát.
+Mặc dù vật lý chỉ có 1 ESP32, nhưng kiến trúc **logical distribution** qua MQTT cho phép mỗi nhạc cụ hoạt động như một node độc lập. Nếu một nhạc cụ bị tắt, các nhạc cụ khác vẫn tiếp tục phát.
 
 ---
 
@@ -33,12 +33,15 @@ Các nhạc cụ hoạt động độc lập qua **MQTT topics**, đảm bảo n
                                         ·-------|--------·
                                                 |
                           ----------------------+----------------------
-                          |                      |                      |
-                   ·------|------·        ·------|------·        ·------|------·
-                   | Virtual ESP   |        |  ESP32 #1   |        |  ESP32 #2   |
-                   | (Simulation)  |        |  (Physical) |        |  (Physical) |
-                   | - 4 instruments|        | - 2 instruments|     | - 2 instruments|
-                   ·---------------·        ·---------------·        ·---------------·
+                          |                      |
+                   ·------|------·        ·------|------·
+                   | Virtual ESP   |        |  ESP32 vật lý  |
+                   | (Simulation)  |        |  (1 board)     |
+                   | - 4 instruments|        |  - Guitar  (pin 2)  |
+                   ·---------------·        |  - Bass    (pin 16) |
+                                            |  - Oboe    (pin 19) |
+                                            |  - Drums   (pin 23) |
+                                            ·--------------------·
 ```
 
 ### Thành phần
@@ -48,8 +51,8 @@ Các nhạc cụ hoạt động độc lập qua **MQTT topics**, đảm bảo n
 | **Server** | Node.js + Express + MQTT.js | Điều phối, API, MQTT Publisher |
 | **Frontend** | HTML5 + Vanilla JS + Socket.IO | UI điều khiển |
 | **MQTT Broker** | HiveMQ Cloud (Free) | Message bus trung tâm |
-| **ESP32** | Arduino (C++) + PubSubClient | Nhận lệnh, phát nhạc đồng bộ |
-| **Virtual ESP** | Node.js + MQTT.js | Mô phỏng ESP khi không có phần cứng |
+| **ESP32** | Arduino (C++) + PubSubClient | 1 board điều khiển 4 buzzer qua 4 MQTT topics |
+| **Virtual ESP** | Node.js + MQTT.js | Mô phỏng ESP để test khi không có phần cứng |
 
 ---
 
@@ -232,7 +235,7 @@ Virtual ESP sẽ kết nối HiveMQ Cloud, subscribe các topic, và log phản 
 
 ## 8. Hướng Phát triển
 
-- [ ] **Scale nhiều ESP32 vật lý**: Mỗi ESP điều khiển 1-2 nhạc cụ, chạy thật sự phân tán.
+- [ ] **Scale ra nhiều ESP32 vật lý**: Hiện tại 1 ESP32 điều khiển 4 buzzer (4 logical nodes). Scale ra 4 ESP32 riêng biệt, mỗi ESP 1 nhạc cụ, để đạt true fault tolerance.
 - [ ] **NTP Clock Sync**: Thay vì dùng server-relative time, dùng NTP để đồng bộ thời gian tuyệt đối.
 - [ ] **TLS Certificate**: Load CA certificate HiveMQ vào ESP32, bỏ `setInsecure()`.
 - [ ] **Offline Buffer**: ESP cache score vào SPIFFS/SD card để chơi offline khi mất WiFi.
