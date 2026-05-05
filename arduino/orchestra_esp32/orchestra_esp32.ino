@@ -214,6 +214,7 @@ void handleSync(const char* message) {
 
   unsigned long serverPos = doc["position"];
   bool serverPlaying = doc["isPlaying"];
+  unsigned long sentAt = doc["sentAt"];
 
   globalPosition = serverPos;
   lastSyncLocalTime = millis();

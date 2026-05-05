@@ -92,8 +92,9 @@ function startSyncBroadcast() {
     mqttClient.publish('orchestra/conductor/sync', JSON.stringify({
       position: pos,
       isPlaying: true,
+      sentAt: Date.now(),
     }), { qos: 0 });
-  }, 500);
+  }, 200);
 }
 
 function stopSyncBroadcast() {
